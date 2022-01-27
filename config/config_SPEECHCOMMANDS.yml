@@ -14,8 +14,15 @@ in_chans: 1
 hidden_chans: 32
 chans_scale: 2
 depth: 5
-loss_function_name: MSELoss
+loss_function_name: L1Loss
 checkpoint_path: null
+seed: 0
+early_stopping: True
+patience: 3
+default_root_dir: save/
+gpus: -1
+precision: 32
+max_epochs: 100
 
 # transforms configuration
 transforms_config:
