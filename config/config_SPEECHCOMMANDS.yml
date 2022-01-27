@@ -2,3 +2,45 @@
 mode: train
 root: data/
 predefined_dataset: SPEECHCOMMANDS
+classes: ["clean", "mixed"]
+max_samples: null
+batch_size: 32
+num_workers: 0
+device: cuda
+sample_rate: 16000
+
+# transforms configuration
+transforms_config:
+  train:
+    PadWaveform:
+      max_waveform_length: 16000
+
+  val:
+    PadWaveform:
+      max_waveform_length: 16000
+
+  test:
+    PadWaveform:
+      max_waveform_length: 16000
+
+  predict:
+    PadWaveform:
+      max_waveform_length: 16000
+
+# target transforms configuration
+target_transforms_config:
+  train:
+    PadWaveform:
+      max_waveform_length: 16000
+
+  val:
+    PadWaveform:
+      max_waveform_length: 16000
+
+  test:
+    PadWaveform:
+      max_waveform_length: 16000
+
+  predict:
+    PadWaveform:
+      max_waveform_length: 16000
