@@ -11,14 +11,45 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 
+#def
+def collate_fn(batch):
+    batch_of_sample = []
+    batch_of_n_splits = []
+    batch_of_target_length = []
+    for v in batch:
+        batch_of_sample.append(v[0])
+        batch_of_n_splits.append(v[1])
+        batch_of_target_length.append(v[2])
+    batch_of_sample = torch.cat(batch_of_sample)
+    batch_of_n_splits = torch.tensor(batch_of_n_splits)
+    batch_of_target_length = torch.tensor(batch_of_target_length)
+    return batch_of_sample, batch_of_n_splits, batch_of_target_length
+
+
 # class
 class AudioPredictDataset(AudioPredictDataset):
-    def __init__(self, root, loader, transform) -> None:
-        super().__init__(root, loader, transform)
+    def __init__(self,
+                 root,
+                 loader,
+                 transform,
+                 max_waveform_length,
+                 extensions=('.wav', '.flac')) -> None:
+        super().__init__(root, loader, transform, extensions)
+        self.max_waveform_length = max_waveform_length
 
     def __getitem__(self, index) -> T_co:
-        sample = super().__getitem__(index)
-        return sample
+        path = self.samples[index]
+        sample = self.get_sample(path=path)
+        _, target_length = sample.shape
+        temp = []
+        for idx in range(0, target_length, self.max_waveform_length):
+            s = self.transform(sample[:, idx:idx +
+                                      self.max_waveform_length])[None]
+            temp.append(s)
+        # the transformed sample dimension is (n_splits, in_chans, length)
+        sample = torch.cat(temp, 0)
+        n_splits = sample.shape[0]
+        return sample, n_splits, target_length
 
 
 class Predict:
@@ -33,39 +64,56 @@ class Predict:
         self.num_workers = project_parameters.num_workers
         self.classes = project_parameters.classes
         self.loader = AudioLoader(sample_rate=project_parameters.sample_rate)
+        self.max_waveform_length = project_parameters.max_waveform_length
 
     def predict(self, filepath) -> Any:
-        result = []
         if isfile(path=filepath):
             # predict the file
             sample = self.loader(path=filepath)
-            # the transformed sample dimension is (1, in_chans, freq, time)
-            sample = self.transform(sample)[None]
+            _, target_length = sample.shape
+            temp = []
+            for idx in range(0, target_length, self.max_waveform_length):
+                s = self.transform(sample[:, idx:idx +
+                                          self.max_waveform_length])[None]
+                temp.append(s)
+            # the transformed sample dimension is (n_splits, in_chans, length)
+            sample = torch.cat(temp, 0)
             if self.device == 'cuda' and torch.cuda.is_available():
                 sample = sample.cuda()
             with torch.no_grad():
-                sample_hat = self.model(sample)[0]
-                result.append(sample_hat)
+                sample_hat = self.model(sample)
+                sample_hat = torch.cat([v for v in sample_hat], -1)
+                sample_hat = sample_hat[..., :target_length]
+                return sample_hat
         else:
+            result = []
             # predict the file from folder
-            dataset = AudioPredictDataset(root=filepath,
-                                          loader=self.loader,
-                                          transform=self.transform)
+            dataset = AudioPredictDataset(
+                root=filepath,
+                loader=self.loader,
+                transform=self.transform,
+                max_waveform_length=self.max_waveform_length)
             pin_memory = True if self.device == 'cuda' and torch.cuda.is_available(
             ) else False
             data_loader = DataLoader(dataset=dataset,
                                      batch_size=self.batch_size,
                                      shuffle=False,
                                      num_workers=self.num_workers,
-                                     pin_memory=pin_memory)
+                                     pin_memory=pin_memory,
+                                     collate_fn=collate_fn)
             with torch.no_grad():
-                for sample in tqdm(data_loader):
+                for sample, n_splits, target_length in tqdm(data_loader):
                     if self.device == 'cuda' and torch.cuda.is_available():
                         sample = sample.cuda()
                     sample_hat = self.model(sample)
-                    result.append(sample_hat)
-        result = torch.cat(result)
-        return result
+                    temp = []
+                    idx = 0
+                    for ns, t in zip(n_splits, target_length):
+                        s = torch.cat([v for v in sample_hat[idx:idx + ns]],
+                                      -1)[..., :t]
+                        temp.append(s)
+                    result += temp
+            return result
 
 
 if __name__ == '__main__':
