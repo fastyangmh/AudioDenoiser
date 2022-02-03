@@ -23,42 +23,43 @@ default_root_dir: save/
 gpus: -1
 precision: 32
 max_epochs: 100
+max_waveform_length: 16000
 
 # transforms configuration
 transforms_config:
   train:
     PadWaveform:
-      max_waveform_length: 16000
+      max_waveform_length: 16000 #should be the same as max_waveform_length
 
   val:
     PadWaveform:
-      max_waveform_length: 16000
+      max_waveform_length: 16000 #should be the same as max_waveform_length
 
   test:
     PadWaveform:
-      max_waveform_length: 16000
+      max_waveform_length: 16000 #should be the same as max_waveform_length
 
   predict:
     PadWaveform:
-      max_waveform_length: 16000
+      max_waveform_length: 16000 #should be the same as max_waveform_length
 
 # target transforms configuration
 target_transforms_config:
   train:
     PadWaveform:
-      max_waveform_length: 16000
+      max_waveform_length: 16000 #should be the same as max_waveform_length
 
   val:
     PadWaveform:
-      max_waveform_length: 16000
+      max_waveform_length: 16000 #should be the same as max_waveform_length
 
   test:
     PadWaveform:
-      max_waveform_length: 16000
+      max_waveform_length: 16000 #should be the same as max_waveform_length
 
   predict:
     PadWaveform:
-      max_waveform_length: 16000
+      max_waveform_length: 16000 #should be the same as max_waveform_length
 
 # optimizers configuration
 optimizers_config:

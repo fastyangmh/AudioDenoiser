@@ -7,6 +7,8 @@ from torch import Tensor
 import torch
 from glob import glob
 from os.path import join
+import random
+import numpy as np
 
 
 #def
@@ -79,25 +81,37 @@ class MyAudioFolder(MyAudioFolder):
         super().__init__(root, loader, extensions, transform, target_transform)
         self.classes = ['clean', 'mixed']
         self.class_to_idx = {k: v for v, k in enumerate(self.classes)}
-        self.find_samples()
+        self.find_files()
 
-    def find_samples(self):
-        samples = {}
+    def find_files(self):
+        files = {}
         for cls in self.classes:
-            s = []
+            f = []
             for ext in self.extensions:
-                s += glob(join(self.root, '{}/*{}'.format(cls, ext)))
-            samples[cls] = sorted(s)
-        self.samples = samples
+                f += glob(join(self.root, '{}/*{}'.format(cls, ext)))
+            files[cls] = sorted(f)
+        number_of_files = [len(files[cls]) for cls in self.classes]
+        assert all([l == len(files[self.classes[0]])
+                    for l in number_of_files]), number_of_files
+        self.files = files
+        self.samples = range(number_of_files[0])
 
     def __getitem__(self, index: int) -> Tuple[Any, Any]:
-        mixed = self.loader(self.samples['mixed'][index])
-        clean = self.loader(self.samples['clean'][index])
+        mixed = self.loader(self.files['mixed'][index])
+        clean = self.loader(self.files['clean'][index])
         if self.transform is not None:
             mixed = self.transform(mixed)
         if self.target_transform is not None:
             clean = self.target_transform(clean)
         return mixed, clean
+
+    def decrease_samples(self, max_samples):
+        if max_samples is not None:
+            index = random.sample(population=range(len(self.samples)),
+                                  k=max_samples)
+            for cls in self.classes:
+                self.files[cls] = np.array(self.files[cls])[index]
+            self.samples = range(max_samples)
 
 
 if __name__ == '__main__':
