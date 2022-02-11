@@ -10,6 +10,7 @@ from matplotlib.figure import Figure
 from playsound import playsound
 import tkinter as tk
 import sounddevice as sd
+import gradio as gr
 
 
 # class
@@ -21,6 +22,10 @@ class PredictGUI(BasePredictGUI):
         self.transform = parse_transforms(
             transforms_config=project_parameters.transforms_config)['predict']
         self.sample_rate = project_parameters.sample_rate
+        self.web_interface = project_parameters.web_interface
+        self.examples = project_parameters.examples if len(
+            project_parameters.examples) else None
+        self.in_chans = project_parameters.in_chans
 
         # button
         self.play_button = Button(master=self.window,
@@ -92,7 +97,8 @@ class PredictGUI(BasePredictGUI):
 
     def denoise(self):
         if self.filepath is not None:
-            sample_hat = self.predictor.predict(filepath=self.filepath)
+            #sample_hat dimension is (in_chans, length)
+            sample_hat = self.predictor.predict(inputs=self.filepath)
             self.reset_widget()
             self.display_output(sample_hat=sample_hat)
             sd.play(data=sample_hat.mean(0), samplerate=self.sample_rate)
@@ -105,20 +111,45 @@ class PredictGUI(BasePredictGUI):
         else:
             messagebox.showerror(title='Error!', message='please open a file!')
 
+    def inference(self, inputs):
+        #sample_hat dimension is (in_chans, length)
+        sample_hat = self.predictor.predict(inputs=inputs)
+        sample_hat = sample_hat.cpu().data.numpy()
+        # gradio API only support 2 channels audio
+        in_chans, _ = sample_hat.shape
+        if in_chans != 2:
+            sample_hat = sample_hat.mean(0)
+            sample_hat = np.concatenate([sample_hat[None] for idx in range(2)],
+                                        0)
+        #convert the data type of sample_hat for gradio API
+        sample_hat = (sample_hat * np.iinfo(np.int16).max).astype(np.int16)
+        #convert the dimension of sample_hat from (in_chans, length) to (length, in_chans)
+        sample_hat = sample_hat.T
+        return (self.sample_rate, sample_hat)
+
     def run(self):
-        # NW
-        self.open_file_button.pack(anchor=tk.NW)
-        self.denoise_button.pack(anchor=tk.NW)
-        self.play_button.pack(anchor=tk.NW)
+        if self.web_interface:
+            gr.Interface(fn=self.inference,
+                         inputs=gr.inputs.Audio(source='microphone',
+                                                type='filepath'),
+                         outputs=gr.outputs.Audio(type='numpy'),
+                         examples=self.examples,
+                         interpretation="default").launch(share=True,
+                                                          inbrowser=True)
+        else:
+            # NW
+            self.open_file_button.pack(anchor=tk.NW)
+            self.denoise_button.pack(anchor=tk.NW)
+            self.play_button.pack(anchor=tk.NW)
 
-        # N
-        self.filepath_label.pack(anchor=tk.N)
-        self.image_canvas.get_tk_widget().pack(anchor=tk.N)
-        self.predicted_label.pack(anchor=tk.N)
-        self.result_label.pack(anchor=tk.N)
+            # N
+            self.filepath_label.pack(anchor=tk.N)
+            self.image_canvas.get_tk_widget().pack(anchor=tk.N)
+            self.predicted_label.pack(anchor=tk.N)
+            self.result_label.pack(anchor=tk.N)
 
-        # run
-        super().run()
+            # run
+            super().run()
 
 
 if __name__ == '__main__':
