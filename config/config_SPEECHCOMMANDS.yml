@@ -24,6 +24,20 @@ gpus: -1
 precision: 32
 max_epochs: 100
 max_waveform_length: 16000
+web_interface: True
+examples:
+  [
+    "examples/SPEECHCOMMANDS/32ad5b65_nohash_2.wav",
+    "examples/SPEECHCOMMANDS/32ad5b65_nohash_2_snr_-20.wav",
+    "examples/SPEECHCOMMANDS/3a33d3a4_nohash_2.wav",
+    "examples/SPEECHCOMMANDS/3a33d3a4_nohash_2_snr_-20.wav",
+    "examples/SPEECHCOMMANDS/3ca784ec_nohash_0.wav",
+    "examples/SPEECHCOMMANDS/3ca784ec_nohash_0_snr_-20.wav",
+    "examples/SPEECHCOMMANDS/4c3cddb8_nohash_4.wav",
+    "examples/SPEECHCOMMANDS/4c3cddb8_nohash_4_snr_-20.wav",
+    "examples/SPEECHCOMMANDS/ab5d7179_nohash_0.wav",
+    "examples/SPEECHCOMMANDS/ab5d7179_nohash_0_snr_-20.wav",
+  ]
 tuning_test: False
 cpu_resources_per_trial: 1
 gpu_resources_per_trial: 1
