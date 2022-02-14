@@ -2,6 +2,7 @@
 from src.project_parameters import ProjectParameters
 from DeepLearningTemplate.predict import AudioPredictDataset
 from typing import TypeVar, Any
+
 T_co = TypeVar('T_co', covariant=True)
 from src.model import create_model
 import torch
@@ -65,11 +66,17 @@ class Predict:
         self.classes = project_parameters.classes
         self.loader = AudioLoader(sample_rate=project_parameters.sample_rate)
         self.max_waveform_length = project_parameters.max_waveform_length
+        self.in_chans = project_parameters.in_chans
 
-    def predict(self, filepath) -> Any:
-        if isfile(path=filepath):
+    def predict(self, inputs) -> Any:
+        if isfile(path=inputs):
             # predict the file
-            sample = self.loader(path=filepath)
+            sample = self.loader(path=inputs)
+            in_chans, _ = sample.shape
+            if in_chans != self.in_chans:
+                sample = sample.mean(0)
+                sample = torch.cat(
+                    [sample[None] for idx in range(self.in_chans)])
             _, target_length = sample.shape
             temp = []
             for idx in range(0, target_length, self.max_waveform_length):
@@ -89,7 +96,7 @@ class Predict:
             result = []
             # predict the file from folder
             dataset = AudioPredictDataset(
-                root=filepath,
+                root=inputs,
                 loader=self.loader,
                 transform=self.transform,
                 max_waveform_length=self.max_waveform_length)
@@ -122,4 +129,4 @@ if __name__ == '__main__':
 
     # predict file
     result = Predict(project_parameters=project_parameters).predict(
-        filepath=project_parameters.root)
+        inputs=project_parameters.root)
