@@ -25,7 +25,6 @@ class PredictGUI(BasePredictGUI):
         self.web_interface = project_parameters.web_interface
         self.examples = project_parameters.examples if len(
             project_parameters.examples) else None
-        self.in_chans = project_parameters.in_chans
 
         # button
         self.play_button = Button(master=self.window,
